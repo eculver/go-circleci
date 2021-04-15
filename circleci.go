@@ -190,7 +190,7 @@ func (c *Client) Me() (*User, error) {
 
 // ListProjects returns the list of projects the user is watching
 func (c *Client) ListProjects() ([]*Project, error) {
-	projects, err := listProjects("projects", -1, 0)
+	projects, err := c.listProjects("projects", -1, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -202,12 +202,9 @@ func (c *Client) ListProjects() ([]*Project, error) {
 	return projects, nil
 }
 
-func (c *Client) listProjects(params url.Values, limit, offset int) ([]*Project, error) {
+func (c *Client) listProjects(path string, limit, offset int) ([]*Project, error) {
 	allProjects := []*Project{}
-
-	if params == nil {
-		params = url.Values{}
-	}
+	params := url.Values{}
 
 	fetchAll := limit == -1
 	for {
@@ -231,9 +228,9 @@ func (c *Client) listProjects(params url.Values, limit, offset int) ([]*Project,
 		}
 		allProjects = append(allProjects, projects...)
 
-		offset += len(builds)
-		limit -= len(builds)
-		if len(builds) < queryLimit || limit == 0 {
+		offset += len(projects)
+		limit -= len(projects)
+		if len(projects) < queryLimit || limit == 0 {
 			break
 		}
 	}
