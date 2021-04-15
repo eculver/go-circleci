@@ -190,20 +190,55 @@ func (c *Client) Me() (*User, error) {
 
 // ListProjects returns the list of projects the user is watching
 func (c *Client) ListProjects() ([]*Project, error) {
-	projects := []*Project{}
-
-	err := c.request("GET", "projects", &projects, nil, nil)
+	projects, err := listProjects("projects", -1, 0)
 	if err != nil {
 		return nil, err
 	}
-
 	for _, project := range projects {
 		if err := cleanupProject(project); err != nil {
 			return nil, err
 		}
 	}
-
 	return projects, nil
+}
+
+func (c *Client) listProjects(params url.Values, limit, offset int) ([]*Project, error) {
+	allProjects := []*Project{}
+
+	if params == nil {
+		params = url.Values{}
+	}
+
+	fetchAll := limit == -1
+	for {
+		projects := []*Project{}
+
+		if fetchAll {
+			limit = queryLimit + 1
+		}
+
+		l := limit
+		if l > queryLimit {
+			l = queryLimit
+		}
+
+		params.Set("limit", strconv.Itoa(l))
+		params.Set("offset", strconv.Itoa(offset))
+
+		err := c.request("GET", path, &projects, params, nil)
+		if err != nil {
+			return nil, err
+		}
+		allProjects = append(allProjects, projects...)
+
+		offset += len(builds)
+		limit -= len(builds)
+		if len(builds) < queryLimit || limit == 0 {
+			break
+		}
+	}
+
+	return allProjects, nil
 }
 
 // EnableProject enables a project - generates a deploy SSH key used to checkout the Github repo.
